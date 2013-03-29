@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Name="Pacifica Authentication @VERSION@"
+		Id="*"
+		UpgradeCode="6B23598D-3A8C-4E85-B61D-9B61BB9A7378"
+		Language="1033"
+		Codepage="1252"
+		Version="@VERSION@"
+		Manufacturer="MyEMSL Team">
+		
+		<Package Id="*"
+			Keywords="Installer"
+			Description="Pacifica Authentication Installer"
+			Comments="Pacifica Authentication Package."
+			Manufacturer="MyEMSL Team"
+			InstallerVersion="300"
+			Languages="1033"
+			Compressed="yes"
+			SummaryCodepage="1252"/>
+			
+		<MajorUpgrade DowngradeErrorMessage="Downgrade not available."/>
+		
+		<Media Id="1"
+			Cabinet="pacificaauth.cab"
+			EmbedCab="yes"/>
+			
+		<Property Id="ALLUSERS" Value="1" />
+		
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFilesFolder" Name="PFiles">
+				<Directory Id="Pacifica" Name="Pacifica">
+					<Directory Id="INSTALLDIR" Name="Auth">
+					</Directory>
+				</Directory>
+			</Directory>
+		</Directory>
+		<Feature Id="Complete" Level="1">
+			<ComponentGroupRef Id="PacificaAuthRelease"/>
+		</Feature>
+		<Binary Id="PathHelperExe"
+			SourceFile="build/release/pathhelper.exe"/>
+		<CustomAction Id="PathHelper"
+			BinaryKey="PathHelperExe"
+			Return="check"
+			ExeCommand="&quot;[INSTALLDIR] &quot; "
+			Execute="deferred"
+			Impersonate="no"/>
+		<CustomAction Id="PathHelperUn"
+			BinaryKey="PathHelperExe"
+			Return="check"
+			ExeCommand="/r &quot;[INSTALLDIR] &quot; "
+			Execute="deferred"
+			Impersonate="no"/>
+		<InstallExecuteSequence>
+			<Custom Action="PathHelper" After="InstallFiles">NOT Installed</Custom>
+			<Custom Action="PathHelperUn" After="InstallFiles">Installed AND NOT UPGRADINGPRODUCTCODE</Custom>
+			<ScheduleReboot After="InstallFinalize"/>
+		</InstallExecuteSequence>
+		<Condition Message="You need to be an administrator to install this package.">Privileged</Condition>
+	</Product>
+</Wix>

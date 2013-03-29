@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Name="Pacifica Authentication Default Config @VERSION@"
+		Id="491837AC-C08F-46CC-9860-131CE2E2D191"
+		UpgradeCode="E31E097C-FD5E-4579-B26A-B7766E281AAA"
+		Language="1033"
+		Codepage="1252"
+		Version="@VERSION@"
+		Manufacturer="MyEMSL Team">
+		<Package Id='*'
+			Keywords="Installer"
+			Description="Pacifica Auth Config Installer"
+			Comments="Pacifica Authentication Config Package."
+			Manufacturer="MyEMSL Team"
+			InstallerVersion="300"
+			Languages="1033"
+			Compressed="yes"
+			SummaryCodepage="1252"/>
+		<Property Id="ALLUSERS" Value="1"/>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Component Id="ConfigReg" Guid="8EB5D4AF-E5D3-4ADB-B65A-67F3E25C8F88">
+				<RegistryKey Root="HKLM" Key="Software\Pacifica\Pacifica Auth\Url">
+					<RegistryValue Type="string" Name="services" Value="https://my.emsl.pnl.gov/myemsl/services" />
+					<RegistryValue Type="string" Name="insecure" Value="True" />
+				</RegistryKey>
+			</Component>
+		</Directory>
+		<Feature Id="Complete" Level="1">
+			<ComponentRef Id="ConfigReg"/>
+		</Feature>
+	</Product>
+</Wix>

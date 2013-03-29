@@ -1,0 +1,262 @@
+#work around go not supported by rpm
+
+%global debug_package %{nil}
+%global __spec_install_post /usr/lib/rpm/check-rpaths   /usr/lib/rpm/check-buildroot  \
+  /usr/lib/rpm/brp-compress
+
+Name: pacifica-auth
+Version: @VERSION@
+Release: 2
+Summary: Pacifica Authentication Package.
+Group: System Environment/Base
+License: UNKNOWN
+Source: pacificaauth-%{version}.tar.gz
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
+BuildConflicts: go-pacifica-auth
+BuildRequires: curl-devel
+
+%{!?_qt4_qmake: %define _qt4_qmake qmake}
+
+%{!?dist: %define dist .el5}
+
+%if %(test "x%{dist}" = 'x.el6' && echo 1 || echo 0)
+        %define pythondir python2.6
+BuildRequires: qt-devel, qtwebkit-devel
+%else
+	%if %(test x`echo "%{dist}" | cut -c1-3` = 'x.fc' && echo 1 || echo 0)
+       		%define pythondir python2.6
+BuildRequires: qt-devel, qtwebkit-devel
+	%else
+       		%define pythondir python2.4
+BuildRequires: qt47-devel, qt47-webkit-devel
+	%endif
+%endif
+
+%if 0%{?_without_go:1}
+	%global use_go 0
+%else
+BuildRequires: go
+	%global use_go 1
+%endif
+
+%if 0%{?_with_windows:1}
+	%global use_windows 1
+%else
+	%if 0%{?_without_windows:1}
+		%global use_windows 0
+	%else
+		%if %(test x`echo "%{dist}" | cut -c1-3` = 'x.fc' && echo 1 || echo 0)
+			%global use_windows 1
+		%else
+			%global use_windows 0
+		%endif
+	%endif
+%endif
+
+%if %{use_windows}
+%global mingw32_root /usr/i686-w64-mingw32/sys-root/mingw
+BuildRequires: mingw32-pkg-config mingw32-qt mingw32-curl wine zip unzip
+%endif
+
+
+%description
+Pacifica Authentication Package
+
+%package -n     pacifica-auth-default-local
+Summary:        Default config for Pacifica authentication
+Group:          System Environment/Base
+Requires: %{name}
+
+%description -n pacifica-auth-default-local
+Default configuration to point to Pacifica running on localhost
+
+%package -n     libpacificaauth
+Summary:        library for Pacifica authentication
+Group:          System Environment/Base
+Requires: %{name}
+
+%description -n libpacificaauth
+library for Pacifica authentication
+
+%package -n     libpacificaauth-devel
+Summary:        Development library for Pacifica authentication
+Group:          System Environment/Base
+Requires: %{name}
+
+%description -n libpacificaauth-devel
+Development library for Pacifica authentication
+
+%if %{use_go}
+%package -n     go-pacifica-auth
+Summary:        go devel package for Pacifica authentication
+Group:          System Environment/Base
+Requires: %{name}
+
+%description -n go-pacifica-auth
+go devel package for Pacifica authentication
+
+%if %{use_windows}
+%package -n     mingw32-go-pacifica-auth
+Summary:        go devel package for Pacifica authentication
+Group:          System Environment/Base
+Requires: %{name}
+
+%description -n mingw32-go-pacifica-auth
+go devel package for Pacifica authentication
+
+%package -n     mingw32-pacifica-auth-zip
+Summary:        cross build for package for Pacifica authentication
+Group:          System Environment/Base
+Requires: %{name}
+
+%description -n mingw32-pacifica-auth-zip
+cross build package for Pacifica authentication
+%endif
+%endif
+
+%package -n     python-pacifica-auth
+Summary:        python devel package for Pacifica authentication
+Group:          System Environment/Base
+Requires: %{name}
+
+%description -n python-pacifica-auth
+python devel package for Pacifica authentication
+
+%if %{use_windows}
+%package -n     mingw32-libpacificaauth
+Summary:        library for Pacifica authentication
+Group:          System Environment/Base
+
+%description -n mingw32-libpacificaauth
+library for Pacifica authentication
+
+%package -n     mingw32-libpacificaauth-devel
+Summary:        Development library for Pacifica authentication
+Group:          System Environment/Base
+
+%description -n mingw32-libpacificaauth-devel
+Development library for Pacifica authentication
+%endif
+
+%prep
+%setup -q -n pacificaauth-@VERSION@
+
+%build
+%if %{use_windows}
+make clean
+mingw32-make UNAME=MINGW32_CROSS QMAKE=i686-w64-mingw32-qmake-qt4 build-prep build-qmake pacificaauth.pc pacificaauth.wxs pacificaauthsdk.wxs pacificaauthconfig.wxs
+mv build/bin/libpacificaauth.a build/lib/
+rm -f build-win32.zip
+zip -r build-win32.zip build pacificaauth.wxs pacificaauthsdk.wxs pacificaauthconfig.wxs configbuild.cmd
+pushd scripts
+zip -r ../build-win32.zip bundle.bat
+popd
+%endif
+
+make clean
+make QMAKE=%{_qt4_qmake} build-prep build-qmake pacificaauth.pc
+%if %{use_go}
+make build-go
+%if %{use_windows}
+rm -rf /tmp/gowin
+#FIXME work around go insisting on rebuilding windows .a files sometimes.
+cp -a /usr/lib64/go /tmp/gowin
+make GOROOT=/tmp/gowin GOCROSS='go-windows-386' build-go
+%endif
+%endif
+
+%install
+%if %{use_windows}
+mkdir -p "$RPM_BUILD_ROOT/%{mingw32_root}"
+unzip build-win32.zip 'build/lib/*' -d "$RPM_BUILD_ROOT/%{mingw32_root}"
+unzip build-win32.zip 'build/include/*' -d "$RPM_BUILD_ROOT/%{mingw32_root}"
+unzip build-win32.zip 'build/bin/pacificaauth.dll' -d "$RPM_BUILD_ROOT/%{mingw32_root}"
+mv "$RPM_BUILD_ROOT/%{mingw32_root}/build/lib" "$RPM_BUILD_ROOT/%{mingw32_root}/lib"
+mv "$RPM_BUILD_ROOT/%{mingw32_root}/build/include" "$RPM_BUILD_ROOT/%{mingw32_root}/include"
+mv "$RPM_BUILD_ROOT/%{mingw32_root}/build/bin" "$RPM_BUILD_ROOT/%{mingw32_root}/bin"
+rmdir "$RPM_BUILD_ROOT/%{mingw32_root}/build"
+%endif
+cd qmake
+make INSTALL_ROOT="$RPM_BUILD_ROOT" install
+cd ..
+mkdir -p "$RPM_BUILD_ROOT"/%{_libdir}/%{pythondir}/site-packages
+cp -a python/test.py "$RPM_BUILD_ROOT"/%{_libdir}/%{pythondir}/site-packages/pacificaauth.py
+mkdir -p "$RPM_BUILD_ROOT"/%{_libdir}/pkgconfig
+sed 's/@LIB@/'%{_lib}'/g' pacificaauth.pc > "$RPM_BUILD_ROOT"/%{_libdir}/pkgconfig/pacificaauth.pc
+%if %{use_go}
+export GOROOT=/usr/%{_lib}/go
+mkdir -p "$RPM_BUILD_ROOT/$GOROOT"/pkg/
+cp -a go/pkg/* "$RPM_BUILD_ROOT/$GOROOT"/pkg/
+mkdir -p "$RPM_BUILD_ROOT/$GOROOT"/src/pkg/
+cp -a go/src/* "$RPM_BUILD_ROOT/$GOROOT"/src/pkg
+cp -a go/pkg/* "$RPM_BUILD_ROOT/$GOROOT"/pkg/
+find %{buildroot}/%{_libdir}/go -name '*.a' | xargs chmod 0666
+%if %{use_windows}
+zip -r build-win32.zip go/pkg/windows_386 go/src
+mkdir -p "$RPM_BUILD_ROOT/usr/share/pacifica/auth"
+cp -a build-win32.zip "$RPM_BUILD_ROOT"/usr/share/pacifica/auth/
+%endif
+%endif
+mkdir -p "$RPM_BUILD_ROOT/$GOROOT"/src/pacifica/auth
+mkdir -p "$RPM_BUILD_ROOT/etc/xdg/Pacifica/"
+cp Pacifica\ Auth.conf "$RPM_BUILD_ROOT/etc/xdg/Pacifica/"
+#echo "package pacifica" > "$RPM_BUILD_ROOT/$GOROOT"/src/pacifica/auth/dummy.go
+#touch -d "12/24/2000" "$RPM_BUILD_ROOT/$GOROOT"/src/pacifica/auth/dummy.go
+
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files -n pacifica-auth-default-local
+%defattr(-,root,root)
+%config(noreplace) %{_sysconfdir}/xdg/Pacifica/*
+
+%files -n libpacificaauth
+%defattr(-,root,root)
+%{_libdir}/libpacificaauth.so.*
+
+%files -n libpacificaauth-devel
+%defattr(-,root,root)
+%{_prefix}/include
+%{_libdir}/libpacificaauth.so
+%{_libdir}/pkgconfig
+
+%if %{use_go}
+%files -n go-pacifica-auth
+%defattr(-,root,root)
+%{_libdir}/go/pkg/linux_amd64
+%{_libdir}/go/src/pkg/pacifica/auth/pacificaauth.go
+%{_libdir}/go/src/pkg/pacificaauthtest/test.go
+
+%if %{use_windows}
+%files -n mingw32-go-pacifica-auth
+%defattr(-,root,root)
+%{_libdir}/go/pkg/windows_386
+%{_libdir}/go/src/pkg/pacifica/auth/pacificaauth.go
+%{_libdir}/go/src/pkg/pacificaauthtest/test.go
+
+%files -n mingw32-pacifica-auth-zip
+%defattr(-,root,root)
+/usr/share/pacifica/auth/build-win32.zip
+%endif
+%endif
+
+%files -n python-pacifica-auth
+%defattr(-,root,root)
+%{_libdir}/python*
+
+%if %{use_windows}
+%files -n mingw32-libpacificaauth
+%defattr(-,root,root)
+%{mingw32_root}/bin/pacificaauth.dll
+
+%files -n mingw32-libpacificaauth-devel
+%defattr(-,root,root)
+%{mingw32_root}/include
+%{mingw32_root}/lib/libpacificaauth.a
+%{mingw32_root}/lib/pkgconfig
+%endif
+
+%files
+%defattr(-,root,root)
+%{_bindir}

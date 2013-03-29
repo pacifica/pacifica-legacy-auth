@@ -1,0 +1,38 @@
+OS = Linux
+
+GOROOT := /usr/lib64/go
+GOPATH := $(CURDIR)/go
+QMAKE = qmake-qt47
+
+GOCROSS = go
+
+export GOROOT
+export GOPATH
+
+build-all: build-qmake build-go pacificaauth.pc
+
+build-prep:
+	cd qmake && ${QMAKE}
+
+build-go: pacificaauth 
+
+pacificaauth: go/src/pacifica/auth/pacificaauth.go
+	bash -c ". /usr/share/go/crosscompiler/crosscompile.bash; $(GOCROSS) install pacifica/auth"
+
+build-qmake: build-prep
+	cd qmake && make
+
+MOCKDIST=fedora-18-x86_64
+MOCK=/usr/bin/mock
+
+mock: dist
+	mkdir -p packages/"$(MOCKDIST)"/srpms
+	mkdir -p packages/"$(MOCKDIST)"/bin
+	$(MOCK) -r "$(MOCKDIST)" --buildsrpm --spec pacificaauth.spec --sources "`pwd`"
+	mv "/var/lib/mock/$(MOCKDIST)/result/"*.src.rpm packages/"$(MOCKDIST)"/srpms/
+	$(MOCK) -r "$(MOCKDIST)" --result "$(CURDIR)"/packages/"$(MOCKDIST)"/bin "$(CURDIR)"/packages/"$(MOCKDIST)"/srpms/*.src.rpm
+	if [ -f packages/"$(MOCKDIST)"/bin/mingw32-pacifica-auth-zip-*.rpm ]; then \
+		rpm2cpio packages/"$(MOCKDIST)"/bin/mingw32-pacifica-auth-zip-*.rpm  | cpio -idmv ./usr/share/pacifica/auth/build-win32.zip;	\
+		mv ./usr/share/pacifica/auth/build-win32.zip .; \
+		rm -rf usr; \
+	fi

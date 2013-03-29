@@ -1,0 +1,22 @@
+QMAKE = i686-w64-mingw32-qmake-qt4
+
+CURL = `pkg-config --cflags --libs libcurl`
+CURLDIR = `pkg-config --variable exec_prefix libcurl`
+
+MINGWBINDIR = $(CURLDIR)/bin
+QTBINDIR ?= $(CURLDIR)/bin
+
+CURLDLLS = libcurl-4.dll libssl-10.dll libeay32.dll libssh2-1.dll libidn-11.dll librtmp.dll zlib1.dll libcrypto-10.dll libintl-8.dll iconv.dll
+GCCDLLS = libgcc_s_sjlj-1.dll libstdc++-6.dll
+QTDLLS = QtCore4.dll QtGui4.dll QtXml4.dll QtNetwork4.dll QtWebKit4.dll libpng15-15.dll libsqlite3-0.dll libjpeg-62.dll QtSvg4.dll libtiff-5.dll
+
+GOROOT = /root/go
+GOROOTBIN = $(GOROOT)/bin
+
+GOOS = windows
+GOARCH = 386
+
+export GOOS := $(GOOS)
+export GOARCH := $(GOARCH)
+
+include Makefile.Windows

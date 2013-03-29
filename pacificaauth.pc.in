@@ -1,0 +1,10 @@
+prefix=/usr
+exec_prefix=${prefix}/bin
+libdir=${prefix}/@LIB@
+includedir=${prefix}/include
+
+Name: pacificaauth
+Description: pacificaauth
+Version: @VERSION@
+Cflags: -I${includedir}
+Libs: -L${libdir} -lpacificaauth

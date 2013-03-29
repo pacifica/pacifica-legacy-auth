@@ -1,0 +1,88 @@
+# include local vars for overwriting default variables.
+-include Makefile.local
+
+OS = Windows
+
+MINGWBINDIR ?= /c/QtSDK/mingw/bin
+QTBINDIR ?= /c/QtSDK/Desktop/Qt/4.8.1/mingw/bin
+
+CURLDIR ?= /c/curl
+PKGCONFIG ?= /c/pkg-config
+PKGCONFIGBIN ?= $(PKGCONFIG)/bin
+
+CURLDLLS ?= libcurl.dll libeay32.dll ssleay32.dll libssl32.dll libssh2.dll libidn-11.dll librtmp.dll zlib1.dll
+GCCDLLS ?= libgcc_s_dw2-1.dll mingwm10.dll libstdc++-6.dll
+QTDLLS ?= QtCore4.dll qtGui4.dll QtXml4.dll QtNetwork4.dll QtWebKit4.dll
+
+#$WIX is defined in the WIX MSI installer as "C:\Program Files (x86)\WiX Toolset v3.6\"
+#MSys can properly use this path.
+#If WiX was installed manually (e.g. zip extract to c:\wix), uncomment:
+#WIX = /c/wix
+WIXBIN ?= $(WIX)bin
+
+QMAKE ?= qmake
+
+GOROOT = /c/Go
+GOROOTBIN ?= $(GOROOT)/bin
+
+
+export PKG_CONFIG_PATH := $(PKG_CONFIG_PATH):$(CURLDIR)/lib/pkgconfig
+
+export PATH := $(MINGWBINDIR):$(QTBINDIR):$(GOROOTBIN):$(WIXBIN):$(PKGCONFIGBIN):$(PATH)
+
+export GOPATH := $(CURDIR)/go:$(GOROOT)
+
+printsettings:
+	@echo CURLDIR="$(CURLDIR)"
+	@echo CURLDLLS="$(CURLDLLS)"
+	@echo MINGWBINDIR="$(MINGWBINDIR)"
+	@echo GOPATH=$(GOPATH)
+	@echo PATH="$(PATH)"
+	@echo PKGCONFIG_CURL="`pkg-config --cflags --libs libcurl`|eof"
+
+pacificaauth.wxs: pacificaauth.wxs.in
+	sed "s/@VERSION@/$(VERSION)/g" < pacificaauth.wxs.in > pacificaauth.wxs
+
+pacificaauthsdk.wxs: pacificaauthsdk.wxs.in
+	sed "s/@VERSION@/$(VERSION)/g" < pacificaauthsdk.wxs.in > pacificaauthsdk.wxs
+	
+pacificaauthconfig.wxs: pacificaauthconfig.wxs.in
+	sed "s/@VERSION@/$(VERSION)/g" < pacificaauthconfig.wxs.in > pacificaauthconfig.wxs
+
+build-prep-early:
+	test ! -d build && mkdir build || true
+
+build-prep: build-prep-early
+	cd qmake && $(QMAKE) -recursive
+	mkdir -p build/lib/pkgconfig
+	mkdir -p build/release
+	cp -u pacificaauth.pc.win build/lib/pkgconfig/pacificaauth.pc
+	for p in $(CURLDLLS); do cp -u $(CURLDIR)/bin/$$p build/release; done
+	for p in $(GCCDLLS); do cp -u $(MINGWBINDIR)/$$p build/release; done
+	for p in $(QTDLLS); do cp -u $(QTBINDIR)/$$p build/release; done
+#Latest version of curl changed the name, so reverse the copy order to get WiX build happy.
+#	if [ ! -f build/release/libssl-10.dll ]; then cp -u build/release/libeay32.dll build/release/ssleay32.dll; fi
+	if ! [ -f build/release/libssl32.dll -o -f build/release/libssl-10.dll ]; then cp -u $(CURLDIR)/bin/ssleay32.dll build/release/libssl32.dll; fi
+
+build-qmake:
+	cd qmake && make
+	cd qmake && make install
+	cp -u build/bin/pacificaauth.dll build/release
+
+build-go: pacificaauth
+
+pacificaauth: go/src/pacifica/auth/pacificaauth.go
+	go install pacifica/auth
+
+pacificaauthtest: go/src/pacificaauthtest/test.go
+	go install -a pacificaauthtest
+
+build-final:
+	cp -u build/bin/libpacificaauth.a build/lib
+
+build-all: build-prep build-qmake build-go build-final
+
+msi: msis
+
+msis: clean all pacificaauth.wxs pacificaauthsdk.wxs pacificaauthconfig.wxs
+	cmd /c scripts\\bundle.bat
