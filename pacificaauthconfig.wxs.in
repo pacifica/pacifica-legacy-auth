@@ -23,6 +23,7 @@
 					<RegistryValue Type="string" Name="services" Value="https://my.emsl.pnl.gov/myemsl/services" />
 					<RegistryValue Type="string" Name="insecure" Value="True" />
 				</RegistryKey>
+				<Environment Id="PATH" Name="PATH" Value="[INSTALLDIR]" Permanent="no" Part="last" Action="set" System="yes" />
 			</Component>
 		</Directory>
 		<Feature Id="Complete" Level="1">
