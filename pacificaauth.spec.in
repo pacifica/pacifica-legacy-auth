@@ -81,7 +81,7 @@ library for Pacifica authentication
 %package -n     libpacificaauth-devel
 Summary:        Development library for Pacifica authentication
 Group:          System Environment/Base
-Requires: %{name}
+Requires: %{name} libpacificaauth
 
 %description -n libpacificaauth-devel
 Development library for Pacifica authentication
@@ -133,6 +133,7 @@ library for Pacifica authentication
 %package -n     mingw32-libpacificaauth-devel
 Summary:        Development library for Pacifica authentication
 Group:          System Environment/Base
+Requires:       %{name} mingw32-libpacificaauth
 
 %description -n mingw32-libpacificaauth-devel
 Development library for Pacifica authentication
